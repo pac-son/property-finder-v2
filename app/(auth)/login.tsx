@@ -21,7 +21,7 @@ export default function Login() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       // Success! Navigate to the main app
-      router.replace('/(tabs)/home');
+      router.replace('../(tabs)/home');
     } catch (error: any) {
       // Show user-friendly error messages
       let msg = error.message;
