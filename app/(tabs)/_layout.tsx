@@ -6,17 +6,19 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, // We will build custom headers in the screens
+        headerShown: false, 
         tabBarStyle: {
-          backgroundColor: '#1F2937', // Dark Grey Background
-          borderTopColor: '#1F2937',  // Remove the top line
-          height: 60,                 // Taller bar for modern look
+          backgroundColor: '#1F2937', 
+          borderTopColor: '#1F2937', 
+          height: 60,                
           paddingBottom: 8,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: '#86EFAC', // Green when active
-        tabBarInactiveTintColor: '#9CA3AF', // Grey when inactive
-        tabBarShowLabel: false, // Clean look (Icons only) - Change to true if you want text
+        tabBarActiveTintColor: '#86EFAC', 
+        tabBarInactiveTintColor: '#9CA3AF',
+        
+        tabBarShowLabel: false,
+        
       }}
     >
       {/* 1. Home Tab */}
