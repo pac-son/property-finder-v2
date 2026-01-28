@@ -1,6 +1,35 @@
 import { View, Text, TextInput, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useState } from 'react';
+import PropertyCard from '../../components/PropertyCard';
+
+// Dummy Data (We will fetch this from Firebase later)
+const PROPERTIES = [
+  {
+    id: '1',
+    title: 'Luxury Lekki Apartment',
+    location: 'Lekki Phase 1, Lagos',
+    price: '3,500,000',
+    rating: 4.8,
+    image: 'https://images.unsplash.com/photo-1600596542815-e32c630bd138?w=800&auto=format&fit=crop'
+  },
+  {
+    id: '2',
+    title: 'Modern Duplex in Ikeja',
+    location: 'Ikeja GRA, Lagos',
+    price: '6,000,000',
+    rating: 4.5,
+    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop'
+  },
+  {
+    id: '3',
+    title: 'Cozy Studio Yaba',
+    location: 'Yaba, Lagos',
+    price: '800,000',
+    rating: 4.2,
+    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop'
+  }
+];
 
 export default function Home() {
   const [category, setCategory] = useState('House');
@@ -56,9 +85,11 @@ export default function Home() {
           <Text className="text-gray-500">See more</Text>
         </View>
 
-        {/* Placeholder for Property Cards (We will fill this next) */}
-        <View className="h-40 bg-white rounded-2xl items-center justify-center shadow-sm">
-          <Text className="text-gray-400">Property Listings Loading...</Text>
+        {/* RENDER THE CARDS */}
+        <View className="pb-20"> 
+          {PROPERTIES.map((property) => (
+            <PropertyCard key={property.id} property={property} />
+          ))}
         </View>
 
       </ScrollView>
