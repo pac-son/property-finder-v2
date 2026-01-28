@@ -17,7 +17,10 @@ export default function PropertyCard({ property }: { property: PropertyProps }) 
 
   return (
     <TouchableOpacity 
-      onPress={() => router.push(`/listing/${property.id}`)}
+      onPress={() => router.push({
+        pathname: '/listing/[id]',
+        params: { id: property.id }
+      })}
       className="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden border border-gray-100"
     >
       {/* Image Section */}
