@@ -2,6 +2,7 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, SafeAreaView } fro
 import { FontAwesome } from '@expo/vector-icons';
 import { useState } from 'react';
 import PropertyCard from '../../components/PropertyCard';
+import { useRouter } from 'expo-router';
 
 // Dummy Data (We will fetch this from Firebase later)
 const PROPERTIES = [
@@ -33,6 +34,8 @@ const PROPERTIES = [
 
 export default function Home() {
   const [category, setCategory] = useState('House');
+  const router = useRouter();
+
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -93,6 +96,14 @@ export default function Home() {
         </View>
 
       </ScrollView>
+
+      {/* Floating Action Button (FAB) */}
+      <TouchableOpacity 
+        onPress={() => router.push('/add-property')}
+        className="absolute bottom-6 right-6 bg-dark w-14 h-14 rounded-full items-center justify-center shadow-lg"
+      >
+        <FontAwesome name="plus" size={24} color="#86EFAC" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
