@@ -2,69 +2,68 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc } from 'firebase/firestore';
-import { db, storage, auth } from '../utils/firebaseConfig';
+import { db, auth } from '../utils/firebaseConfig';
 import { FontAwesome } from '@expo/vector-icons';
 
 export default function AddProperty() {
   const router = useRouter();
   const [image, setImage] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null); // New state for the "Text" version of the image
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // 1. Pick Image from Gallery
+  // 1. Pick Image (Modified for No-Billing)
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.5, // Compress image to save data
+      quality: 0.2, // <--- CRITICAL: Low quality to keep the text string small enough for Firestore
+      base64: true, // <--- CRITICAL: Request the image as text
     });
 
     if (!result.canceled) {
       setImage(result.assets[0].uri);
+      // Create the data URL that browsers/phones can read
+      setImageBase64(`data:image/jpeg;base64,${result.assets[0].base64}`);
     }
   };
 
-  // 2. Upload Logic
+  // 2. Upload Logic (Modified: Saves directly to DB)
   const handleUpload = async () => {
-    if (!image || !title || !price || !location) {
+    if (!imageBase64 || !title || !price || !location) {
       Alert.alert('Error', 'Please fill all fields and add an image');
       return;
     }
 
     setUploading(true);
     try {
-      // A. Upload Image to Firebase Storage
-      const response = await fetch(image);
-      const blob = await response.blob();
-      const filename = `properties/${Date.now()}.jpg`;
-      const storageRef = ref(storage, filename);
-      
-      await uploadBytes(storageRef, blob);
-      const downloadURL = await getDownloadURL(storageRef);
-
-      // B. Save Metadata to Firestore
+      // We skip "uploadBytes" and just save the big string directly
       await addDoc(collection(db, "properties"), {
         title: title,
         price: price,
         location: location,
         description: description,
-        image: downloadURL,
+        image: imageBase64, // <--- Saving the image as text!
         agentId: auth.currentUser?.uid,
         createdAt: new Date().toISOString(),
-        rating: 4.5, // Default rating for now
+        rating: 4.5,
       });
 
-      Alert.alert("Success", "Property Listed!");
+      Alert.alert("Success", "Property Listed (No Storage Required)!");
       router.replace('/(tabs)/home');
 
     } catch (error: any) {
-      Alert.alert("Upload Failed", error.message);
+      // If the image is too big, Firestore will throw an error
+      if (error.message.includes("exceeds the maximum allowed size")) {
+        Alert.alert("Error", "Image is too big. Please pick a smaller one.");
+      } else {
+        Alert.alert("Upload Failed", error.message);
+      }
     } finally {
       setUploading(false);
     }
@@ -89,15 +88,15 @@ export default function AddProperty() {
       {/* Form Fields */}
       <View className="space-y-4 mb-8">
         <View className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-          <TextInput placeholder="Property Title (e.g. Luxury Villa)" value={title} onChangeText={setTitle} />
+          <TextInput placeholder="Property Title" value={title} onChangeText={setTitle} className="text-dark" />
         </View>
         
         <View className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-          <TextInput placeholder="Price per Year (₦)" keyboardType="numeric" value={price} onChangeText={setPrice} />
+          <TextInput placeholder="Price per Year (₦)" keyboardType="numeric" value={price} onChangeText={setPrice} className="text-dark" />
         </View>
 
         <View className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-          <TextInput placeholder="Location (City, Area)" value={location} onChangeText={setLocation} />
+          <TextInput placeholder="Location" value={location} onChangeText={setLocation} className="text-dark" />
         </View>
 
         <View className="bg-gray-50 p-4 rounded-xl border border-gray-200 h-32">
@@ -106,7 +105,8 @@ export default function AddProperty() {
             multiline 
             value={description} 
             onChangeText={setDescription} 
-            style={{ textAlignVertical: 'top' }} // Fix for Android text alignment
+            style={{ textAlignVertical: 'top' }} 
+            className="text-dark"
           />
         </View>
       </View>
