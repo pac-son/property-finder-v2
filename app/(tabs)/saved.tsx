@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, ActivityIndicator, RefreshControl, Platform, StatusBar} from 'react-native';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router'; // IMPORTANT: Loads data every time you open the tab
 import { collection, getDocs } from 'firebase/firestore';
@@ -48,7 +48,8 @@ export default function Saved() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" 
+      style={{ paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
       <View className="px-6 py-4 border-b border-gray-100">
         <Text className="text-2xl font-bold text-dark">Saved Homes</Text>
       </View>
