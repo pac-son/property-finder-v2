@@ -1,39 +1,87 @@
-import { View, Text, Image, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../utils/firebaseConfig';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'; 
+import { db, auth } from '../../utils/firebaseConfig';
 
 export default function ListingDetails() {
-  const { id } = useLocalSearchParams(); // Get the ID passed from Home
+  const { id } = useLocalSearchParams();
   const router = useRouter();
   
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false); 
+  const [favLoading, setFavLoading] = useState(false);
 
   useEffect(() => {
-    const fetchPropertyDetails = async () => {
+    const fetchDetails = async () => {
       try {
-        // Fetch the specific document using the ID
+        // 1. Fetch Property Details
         const docRef = doc(db, "properties", id as string);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
           setProperty(docSnap.data());
         } else {
-          alert("Property not found!");
+          Alert.alert("Error", "Property not found!");
           router.back();
+          return;
         }
+
+        // 2. Check if already favorite
+        const user = auth.currentUser;
+        if (user) {
+          const favRef = doc(db, "users", user.uid, "favorites", id as string);
+          const favSnap = await getDoc(favRef);
+          if (favSnap.exists()) setIsFavorite(true);
+        }
+
       } catch (error) {
-        console.error("Error fetching details:", error);
+        console.error("Error:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) fetchPropertyDetails();
+    if (id) fetchDetails();
   }, [id]);
+
+  // --- HANDLE FAVORITE TOGGLE ---
+  const toggleFavorite = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert("Sign In Required", "Please log in to save properties.");
+      return;
+    }
+
+    setFavLoading(true);
+    try {
+      const favRef = doc(db, "users", user.uid, "favorites", id as string);
+
+      if (isFavorite) {
+        // UN-LIKE: Remove from database
+        await deleteDoc(favRef);
+        setIsFavorite(false);
+      } else {
+        // LIKE: Save snapshot to database
+        await setDoc(favRef, {
+          id: id,
+          title: property.title,
+          location: property.location,
+          price: property.price,
+          image: property.image,
+          rating: property.rating || 4.5
+        });
+        setIsFavorite(true);
+      }
+    } catch (error) {
+      console.error("Fav Error:", error);
+      Alert.alert("Error", "Could not update favorites.");
+    } finally {
+      setFavLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -49,7 +97,6 @@ export default function ListingDetails() {
     <View className="flex-1 bg-white">
       <StatusBar barStyle="light-content" />
       
-      {/* Scrollable Content */}
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         
         {/* Header Image */}
@@ -57,29 +104,34 @@ export default function ListingDetails() {
           <Image 
             source={{ uri: property.image }} 
             className="w-full bg-gray-300"
-            style={{ height: 350 }} // Inline style to ensure height
+            style={{ height: 350 }} 
             resizeMode="cover"
           />
           
-          {/* Back Button */}
           <TouchableOpacity 
             onPress={() => router.back()}
             className="absolute top-12 left-6 bg-white/30 p-3 rounded-full"
-            style={{ backdropFilter: 'blur(10px)' }} // Visual touch
           >
             <FontAwesome name="arrow-left" size={20} color="white" />
           </TouchableOpacity>
 
-          {/* Favorite Button */}
-          <TouchableOpacity className="absolute top-12 right-6 bg-white/30 p-3 rounded-full">
-            <FontAwesome name="heart-o" size={20} color="white" />
+          {/* ACTIVE FAVORITE BUTTON */}
+          <TouchableOpacity 
+            onPress={toggleFavorite}
+            disabled={favLoading}
+            className="absolute top-12 right-6 bg-white/30 p-3 rounded-full"
+          >
+            {/* Toggle Icon based on state */}
+            <FontAwesome 
+              name={isFavorite ? "heart" : "heart-o"} 
+              size={20} 
+              color={isFavorite ? "#EF4444" : "white"} // Red if liked, White if not
+            />
           </TouchableOpacity>
         </View>
 
-        {/* Content Container */}
         <View className="-mt-10 bg-white rounded-t-3xl px-6 pt-8 pb-32">
           
-          {/* Title & Rating */}
           <View className="flex-row justify-between items-start mb-2">
             <View className="flex-1 mr-4">
               <Text className="text-2xl font-bold text-dark">{property.title}</Text>
@@ -94,16 +146,13 @@ export default function ListingDetails() {
             </View>
           </View>
 
-          {/* Price Tag (Big & Bold) */}
           <Text className="text-3xl font-bold text-green-600 mt-2 mb-6">
             ₦{property.price}<Text className="text-sm font-normal text-gray-400">/yr</Text>
           </Text>
 
-          {/* Description */}
           <Text className="text-lg font-bold text-dark mb-2">Description</Text>
           <Text className="text-gray-500 leading-6 mb-8">{property.description}</Text>
 
-          {/* Agent Section */}
           <Text className="text-lg font-bold text-dark mb-4">Listing Agent</Text>
           <View className="flex-row items-center bg-gray-50 p-4 rounded-xl mb-4">
             <View className="w-12 h-12 bg-gray-300 rounded-full items-center justify-center">
@@ -121,11 +170,10 @@ export default function ListingDetails() {
         </View>
       </ScrollView>
 
-      {/* Sticky Bottom Bar */}
       <View className="absolute bottom-0 w-full bg-white border-t border-gray-100 px-6 py-4 pb-8">
         <TouchableOpacity 
             className="bg-dark w-full py-4 rounded-2xl shadow-lg items-center"
-            onPress={() => alert('Chat functionality coming in Phase 2!')}
+            onPress={() => Alert.alert('Message Sent', 'The agent will contact you shortly.')}
         >
           <Text className="text-primary font-bold text-lg">Message Agent</Text>
         </TouchableOpacity>

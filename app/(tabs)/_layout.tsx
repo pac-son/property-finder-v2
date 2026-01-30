@@ -1,24 +1,21 @@
 import { Tabs } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
-import { View } from 'react-native';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, 
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#1F2937', 
-          borderTopColor: '#1F2937', 
-          height: 60,                
+          backgroundColor: '#1F2937',
+          borderTopColor: '#1F2937',
+          height: 60,
           paddingBottom: 8,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: '#86EFAC', 
+        tabBarActiveTintColor: '#86EFAC',
         tabBarInactiveTintColor: '#9CA3AF',
-        
         tabBarShowLabel: false,
-        
       }}
     >
       {/* 1. Home Tab */}
@@ -29,15 +26,9 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 2. Search Tab */}
-      <Tabs.Screen
-        name="search"
-        options={{
-          tabBarIcon: ({ color }) => <FontAwesome name="search" size={24} color={color} />,
-        }}
-      />
+      {/* 2. REMOVE THE SEARCH TAB BLOCK HERE */}
 
-      {/* 3. Saved/Favorites Tab */}
+      {/* 3. Saved Tab */}
       <Tabs.Screen
         name="saved"
         options={{
