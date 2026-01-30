@@ -1,31 +1,49 @@
-import { View, Text, Image, ScrollView, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
-
-// Mock Data (In the future, we fetch this from Firebase using the ID)
-const PROPERTY_DETAILS = {
-  id: '1',
-  title: 'Luxury Lekki Apartment',
-  location: 'Lekki Phase 1, Lagos',
-  price: '3,500,000',
-  rating: 4.8,
-  description: 'Experience luxury living in the heart of Lekki. This fully serviced apartment comes with 24/7 electricity, a swimming pool, and a fully fitted gym. Perfect for young professionals.',
-  beds: 3,
-  baths: 2,
-  sqft: 1200,
-  agent: {
-    name: 'Agent Smith',
-    image: 'https://randomuser.me/api/portraits/men/32.jpg'
-  },
-  image: 'https://images.unsplash.com/photo-1600596542815-e32c630bd138?w=800&auto=format&fit=crop'
-};
+import { useState, useEffect } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../utils/firebaseConfig';
 
 export default function ListingDetails() {
-  const { id } = useLocalSearchParams(); // This gets the ID from the URL
+  const { id } = useLocalSearchParams(); // Get the ID passed from Home
   const router = useRouter();
+  
+  const [property, setProperty] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // In a real app, you would use useEffect to fetch data for this specific `id`
-  const property = PROPERTY_DETAILS; 
+  useEffect(() => {
+    const fetchPropertyDetails = async () => {
+      try {
+        // Fetch the specific document using the ID
+        const docRef = doc(db, "properties", id as string);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          setProperty(docSnap.data());
+        } else {
+          alert("Property not found!");
+          router.back();
+        }
+      } catch (error) {
+        console.error("Error fetching details:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchPropertyDetails();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#86EFAC" />
+      </View>
+    );
+  }
+
+  if (!property) return null;
 
   return (
     <View className="flex-1 bg-white">
@@ -38,20 +56,22 @@ export default function ListingDetails() {
         <View className="relative">
           <Image 
             source={{ uri: property.image }} 
-            className="w-full h-80 bg-gray-300"
+            className="w-full bg-gray-300"
+            style={{ height: 350 }} // Inline style to ensure height
             resizeMode="cover"
           />
           
-          {/* Back Button Overlay */}
+          {/* Back Button */}
           <TouchableOpacity 
             onPress={() => router.back()}
-            className="absolute top-12 left-6 bg-white/30 p-2 rounded-full backdrop-blur-md"
+            className="absolute top-12 left-6 bg-white/30 p-3 rounded-full"
+            style={{ backdropFilter: 'blur(10px)' }} // Visual touch
           >
             <FontAwesome name="arrow-left" size={20} color="white" />
           </TouchableOpacity>
 
-          {/* Favorite Button Overlay */}
-          <TouchableOpacity className="absolute top-12 right-6 bg-white/30 p-2 rounded-full">
+          {/* Favorite Button */}
+          <TouchableOpacity className="absolute top-12 right-6 bg-white/30 p-3 rounded-full">
             <FontAwesome name="heart-o" size={20} color="white" />
           </TouchableOpacity>
         </View>
@@ -70,63 +90,44 @@ export default function ListingDetails() {
             </View>
             <View className="flex-row items-center bg-gray-100 px-2 py-1 rounded-lg">
               <FontAwesome name="star" size={14} color="#F59E0B" />
-              <Text className="ml-1 font-bold">{property.rating}</Text>
+              <Text className="ml-1 font-bold">{property.rating || 'N/A'}</Text>
             </View>
           </View>
 
-          {/* Features Grid */}
-          <View className="flex-row justify-between mt-6 mb-8 bg-gray-50 p-4 rounded-xl">
-            <View className="items-center">
-              <FontAwesome name="bed" size={20} color="#86EFAC" />
-              <Text className="text-gray-500 text-xs mt-1">{property.beds} Beds</Text>
-            </View>
-            <View className="items-center">
-              <FontAwesome name="bath" size={20} color="#86EFAC" />
-              <Text className="text-gray-500 text-xs mt-1">{property.baths} Baths</Text>
-            </View>
-            <View className="items-center">
-              <FontAwesome name="square" size={20} color="#86EFAC" />
-              <Text className="text-gray-500 text-xs mt-1">{property.sqft} sqft</Text>
-            </View>
-          </View>
+          {/* Price Tag (Big & Bold) */}
+          <Text className="text-3xl font-bold text-green-600 mt-2 mb-6">
+            ₦{property.price}<Text className="text-sm font-normal text-gray-400">/yr</Text>
+          </Text>
 
           {/* Description */}
           <Text className="text-lg font-bold text-dark mb-2">Description</Text>
           <Text className="text-gray-500 leading-6 mb-8">{property.description}</Text>
 
-          {/* Agent Card */}
+          {/* Agent Section */}
           <Text className="text-lg font-bold text-dark mb-4">Listing Agent</Text>
           <View className="flex-row items-center bg-gray-50 p-4 rounded-xl mb-4">
-            <Image 
-              source={{ uri: property.agent.image }} 
-              className="w-12 h-12 rounded-full"
-            />
+            <View className="w-12 h-12 bg-gray-300 rounded-full items-center justify-center">
+              <FontAwesome name="user" size={20} color="white" />
+            </View>
             <View className="ml-4 flex-1">
-              <Text className="font-bold text-dark text-lg">{property.agent.name}</Text>
-              <Text className="text-gray-500 text-xs">Real Estate Agent</Text>
+              <Text className="font-bold text-dark text-lg">Agent</Text>
+              <Text className="text-gray-500 text-xs">View Profile</Text>
             </View>
-            <View className="flex-row space-x-3">
-               <TouchableOpacity className="bg-gray-200 p-2 rounded-full">
-                 <FontAwesome name="phone" size={20} color="black" />
-               </TouchableOpacity>
-            </View>
+            <TouchableOpacity className="bg-gray-200 p-3 rounded-full">
+               <FontAwesome name="phone" size={20} color="black" />
+            </TouchableOpacity>
           </View>
 
         </View>
       </ScrollView>
 
       {/* Sticky Bottom Bar */}
-      <View className="absolute bottom-0 w-full bg-white border-t border-gray-100 px-6 py-4 flex-row items-center justify-between pb-8">
-        <View>
-          <Text className="text-gray-500 text-xs">Total Price</Text>
-          <Text className="text-xl font-bold text-dark">₦{property.price}<Text className="text-sm font-normal text-gray-400">/yr</Text></Text>
-        </View>
-        
+      <View className="absolute bottom-0 w-full bg-white border-t border-gray-100 px-6 py-4 pb-8">
         <TouchableOpacity 
-            className="bg-dark px-8 py-4 rounded-2xl shadow-lg"
-            onPress={() => alert('Chat feature coming next!')}
+            className="bg-dark w-full py-4 rounded-2xl shadow-lg items-center"
+            onPress={() => alert('Chat functionality coming in Phase 2!')}
         >
-          <Text className="text-primary font-bold text-lg">Message Now</Text>
+          <Text className="text-primary font-bold text-lg">Message Agent</Text>
         </TouchableOpacity>
       </View>
     </View>

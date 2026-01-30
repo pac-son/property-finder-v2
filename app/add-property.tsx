@@ -9,7 +9,7 @@ import { FontAwesome } from '@expo/vector-icons';
 export default function AddProperty() {
   const router = useRouter();
   const [image, setImage] = useState<string | null>(null);
-  const [imageBase64, setImageBase64] = useState<string | null>(null); // New state for the "Text" version of the image
+  const [imageBase64, setImageBase64] = useState<string | null>(null); 
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [location, setLocation] = useState('');

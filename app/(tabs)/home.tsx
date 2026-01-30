@@ -1,45 +1,65 @@
-import { View, Text, TextInput, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { useState } from 'react';
-import PropertyCard from '../../components/PropertyCard';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
-
-// Dummy Data (We will fetch this from Firebase later)
-const PROPERTIES = [
-  {
-    id: '1',
-    title: 'Luxury Lekki Apartment',
-    location: 'Lekki Phase 1, Lagos',
-    price: '3,500,000',
-    rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1600596542815-e32c630bd138?w=800&auto=format&fit=crop'
-  },
-  {
-    id: '2',
-    title: 'Modern Duplex in Ikeja',
-    location: 'Ikeja GRA, Lagos',
-    price: '6,000,000',
-    rating: 4.5,
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop'
-  },
-  {
-    id: '3',
-    title: 'Cozy Studio Yaba',
-    location: 'Yaba, Lagos',
-    price: '800,000',
-    rating: 4.2,
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop'
-  }
-];
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../../utils/firebaseConfig'; 
+import PropertyCard from '../../components/PropertyCard';
 
 export default function Home() {
-  const [category, setCategory] = useState('House');
   const router = useRouter();
+  const [category, setCategory] = useState('House');
+  const [properties, setProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Function to fetch data from Firebase
+  const fetchProperties = async () => {
+    try {
+      // Get reference to the collection
+      // We try to order by 'createdAt' desc so newest show first
+      // Note: If this fails initially, remove orderBy and just use collection(db, "properties")
+      const q = query(collection(db, "properties")); 
+      
+      const querySnapshot = await getDocs(q);
+      
+      const fetchedProperties: any[] = [];
+      querySnapshot.forEach((doc) => {
+        fetchedProperties.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+
+      setProperties(fetchedProperties);
+    } catch (error) {
+      console.error("Error fetching properties:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Fetch when screen loads
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+
+  // Pull-to-refresh logic
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchProperties();
+  }, []);
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView className="px-6 pt-4" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="px-6 pt-4" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#86EFAC" />
+        }
+      >
         
         {/* Header */}
         <View className="flex-row justify-between items-center mb-6">
@@ -88,12 +108,24 @@ export default function Home() {
           <Text className="text-gray-500">See more</Text>
         </View>
 
-        {/* RENDER THE CARDS */}
-        <View className="pb-20"> 
-          {PROPERTIES.map((property) => (
-            <PropertyCard key={property.id} property={property} />
-          ))}
-        </View>
+        {/* LIST OF PROPERTIES */}
+        {loading ? (
+          <View className="mt-10">
+            <ActivityIndicator size="large" color="#86EFAC" />
+            <Text className="text-center text-gray-400 mt-2">Finding homes...</Text>
+          </View>
+        ) : properties.length === 0 ? (
+          <View className="mt-10 items-center">
+             <Text className="text-gray-400">No properties found.</Text>
+             <Text className="text-gray-400 text-xs">Be the first to add one!</Text>
+          </View>
+        ) : (
+          <View className="pb-20"> 
+            {properties.map((property) => (
+              <PropertyCard key={property.id} property={property} />
+            ))}
+          </View>
+        )}
 
       </ScrollView>
 
@@ -101,9 +133,11 @@ export default function Home() {
       <TouchableOpacity 
         onPress={() => router.push('/add-property')}
         className="absolute bottom-6 right-6 bg-dark w-14 h-14 rounded-full items-center justify-center shadow-lg"
+        style={{ elevation: 5 }} // Shadow for Android
       >
         <FontAwesome name="plus" size={24} color="#86EFAC" />
       </TouchableOpacity>
+
     </SafeAreaView>
   );
 }
