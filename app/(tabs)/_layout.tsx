@@ -26,7 +26,13 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 2. REMOVE THE SEARCH TAB BLOCK HERE */}
+      {/* 2. Inbox Tab */}
+      <Tabs.Screen
+        name="inbox"
+        options={{
+          tabBarIcon: ({ color }) => <FontAwesome name="comment" size={24} color={color} />,
+        }}
+      />
 
       {/* 3. Saved Tab */}
       <Tabs.Screen

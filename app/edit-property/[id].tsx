@@ -8,13 +8,13 @@ import { FontAwesome } from '@expo/vector-icons';
 
 export default function EditProperty() {
   const router = useRouter();
-  const { id } = useLocalSearchParams(); // Get the ID of the property to edit
+  const { id } = useLocalSearchParams(); 
 
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   
   // Form State
-  const [image, setImage] = useState<string | null>(null); // For display
+  const [image, setImage] = useState<string | null>(null); 
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [location, setLocation] = useState('');
@@ -54,7 +54,7 @@ export default function EditProperty() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.2, // Keep low for Firestore
+      quality: 0.2, 
       base64: true,
     });
 

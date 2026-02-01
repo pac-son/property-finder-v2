@@ -2,7 +2,7 @@ import { View, Text, Image, ScrollView, TouchableOpacity, StatusBar, ActivityInd
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'; 
+import { doc, getDoc, setDoc, deleteDoc, query, where, addDoc, collection, getDocs} from 'firebase/firestore'; 
 import { db, auth } from '../../utils/firebaseConfig';
 
 export default function ListingDetails() {
@@ -93,6 +93,64 @@ export default function ListingDetails() {
 
   if (!property) return null;
 
+  const handleContactAgent = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      Alert.alert("Please login to chat");
+      return;
+    }
+
+    // Don't chat with yourself
+    if (property.agentId === currentUser.uid) {
+      Alert.alert("You own this property!");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 1. Check if chat already exists
+      // We look for a chat where 'participants' array contains BOTH User and Agent
+      const q = query(
+        collection(db, "chats"), 
+        where("participants", "array-contains", currentUser.uid)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      let existingChatId = null;
+
+      // Filter locally to find the exact match with the agent
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.participants.includes(property.agentId)) {
+          existingChatId = doc.id;
+        }
+      });
+
+      if (existingChatId) {
+        // Chat exists, go there
+        router.push(`/chat/${existingChatId}`);
+      } else {
+        // 2. Create new chat
+        const newChatRef = await addDoc(collection(db, "chats"), {
+          participants: [currentUser.uid, property.agentId],
+          startedAt: new Date().toISOString(),
+          lastMessage: "Started a conversation",
+          updatedAt: new Date().toISOString()
+        });
+        
+        // 3. Go to new chat
+        router.push(`../chat/${newChatRef.id}`);
+      }
+
+    } catch (error) {
+      console.error("Chat Error:", error);
+      Alert.alert("Error", "Could not start chat");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View className="flex-1 bg-white">
       <StatusBar barStyle="light-content" />
@@ -175,7 +233,11 @@ export default function ListingDetails() {
             className="bg-dark w-full py-4 rounded-2xl shadow-lg items-center"
             onPress={() => Alert.alert('Message Sent', 'The agent will contact you shortly.')}
         >
-          <Text className="text-primary font-bold text-lg">Message Agent</Text>
+          <Text className="text-primary font-bold text-lg"
+            onPress={handleContactAgent}
+          >
+            Message Agent
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
